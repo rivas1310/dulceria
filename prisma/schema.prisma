@@ -2,6 +2,7 @@
 
 generator client {
   provider = "prisma-client-js"
+  binaryTargets   = ["native", "debian-openssl-3.0.x", "windows"]
 }
 
 datasource db {
@@ -13,13 +14,17 @@ model Category{
   name String
   slug String
   products Product []
+  
 } 
+
 model Product{
   id  Int @id  @default(autoincrement())
   name String
   price Float
   image String
   categoryId Int
+  isActive    Boolean  @default(true)
+  stock       Int 
   category Category @relation(fields: [categoryId],references: [id])
   orderItems OrderProducts[]
 }
@@ -31,6 +36,8 @@ model Order{
   date DateTime @default(now())
   status Boolean @default(false)
   orderReadyAt DateTime?
+  phoneNumber    String?
+  ingredients   String?
   orderProducts OrderProducts[]
 }
 model OrderProducts{

@@ -13,3 +13,12 @@ export function getImagePath(imagePath: string){
         return`/products/${imagePath}.jpg`
     }
 }
+
+export function formatDate(date: string | Date) {
+    const fecha = new Date(date);
+    return fecha.toLocaleDateString('es-MX', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
+}

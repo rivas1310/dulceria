@@ -13,8 +13,11 @@ export default function EditProductForm({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const params = useParams()
-  const id = +params.id!
+  const params = useParams();
+  if (!params) {
+    throw new Error("Params are not available"); // Handle the null case
+  }
+  const id = +params.id!; // Ensure params is not null before accessing id
 
   const handleSubmit = async (formData: FormData) => {
     const data = {
@@ -22,6 +25,7 @@ export default function EditProductForm({
       price: formData.get("price"),
       categoryId: formData.get("categoryId"),
       image: formData.get("image"),
+      stock: formData.get("stock")?.toString() || "0",
     };
     const result = ProductSchema.safeParse(data);
     if (!result.success) {

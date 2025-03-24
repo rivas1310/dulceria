@@ -12,10 +12,10 @@ type AdminRouteProps = {
 
 export default function AdminRoute({link}: AdminRouteProps) {
     const pathname = usePathname()
-    const isActive = pathname.startsWith(link.url)
+    const isActive = pathname !== null && pathname === link.url;
   return (
     <Link
-    className={`${isActive ? 'bg-customOrange' : ''} font-bold text-lg border-t border-gray-200 p-3 last last-of-type:border-b text-black `}
+    className={`${isActive ? 'bg-customBlue' : ''} font-bold text-lg border-t border-gray-200 p-3 last last-of-type:border-b text-black `}
     href={link.url}
     target={link.blank ? '_blank': ''}
 

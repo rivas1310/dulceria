@@ -3,15 +3,15 @@ import ImageUpload from "./ImageUpload";
 import { Product } from "@prisma/client";
 
 async function getCategories() {
-    return await prisma.category.findMany()
-
+  return await prisma.category.findMany();
 }
+
 type ProductFormProps = {
-    product?: Product
-}
-export default async function ProductForm({product}: ProductFormProps) {
+  product?: Product;
+};
 
-    const categories = await getCategories()
+export default async function ProductForm({ product }: ProductFormProps) {
+  const categories = await getCategories();
   return (
     <>
       <div className="space-y-2">
@@ -52,18 +52,30 @@ export default async function ProductForm({product}: ProductFormProps) {
           defaultValue={product?.categoryId}
         >
           <option value="">-- Seleccione --</option>
-          {categories.map(category => (
-            <option 
-            key={category.id}
-            value={category.id}
-            >{category.name}</option>
+          {categories.map((category) => (
+            <option key={category.id} value={category.id}>
+              {category.name}
+            </option>
           ))}
         </select>
       </div>
-            <ImageUpload
-            image={product?.image}
-            />
 
+      {/* Nuevo campo de stock */}
+      <div className="space-y-2">
+        <label className="text-slate-800" htmlFor="stock">
+          Stock:
+        </label>
+        <input
+          id="stock"
+          name="stock"
+          type="number"
+          className="block w-full p-3 text-black bg-slate-100"
+          placeholder="Cantidad en Stock"
+          defaultValue={product?.stock ?? 0}
+        />
+      </div>
+
+      <ImageUpload image={product?.image} />
     </>
   );
 }

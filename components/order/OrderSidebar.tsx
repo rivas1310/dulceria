@@ -14,10 +14,10 @@ export default async function OrderSidebar() {
   
 
   return (
-    <aside className="md:w-72 md:h-screen bg-customCyan">
+    <aside className="md:w-71 md:h-screen bg-customBlue">
       <Logo/>
         
-  <nav className='mt-10 text black' >
+  <nav className='mt-9 text-black' >
     {categories.map((category) =>(
       <Categoryicon
       key={category.id}
