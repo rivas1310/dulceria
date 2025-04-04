@@ -1,11 +1,15 @@
 import { PrismaClient } from "@prisma/client";
 
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
+// Prevenir múltiples instancias de Prisma Client en desarrollo
+// Ver: https://www.prisma.io/docs/guides/other/troubleshooting-orm/help-articles/nextjs-prisma-client-dev-practices
 
-export const prisma =
-  globalForPrisma.prisma ||
-  new PrismaClient({
-    log: ["query"],
-  });
+// Declarar variable global para el cliente Prisma
+declare global {
+  var prisma: PrismaClient | undefined;
+}
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+// Inicializar cliente Prisma
+export const prisma = global.prisma || new PrismaClient();
+
+// Guardar el cliente en la variable global sólo en desarrollo
+if (process.env.NODE_ENV !== "production") global.prisma = prisma;

@@ -9,10 +9,13 @@ interface AdminSidebarProps {
 
 const adminNavigation = [
   { url: "/admin/orders", text: "Ordenes", blank: false },
-  { url: "/admin/products", text: "Productos", blank: false },
-  { url: "/admin/categories", text: "Categorías", blank: false },
-  { url: "/admin/subcategories", text: "Subcategorías", blank: false },
+  { url: "/admin/productos", text: "Productos", blank: false },
   { url: "/order/cafe", text: "Ver Quiosco", blank: true },
+  { url: "/admin/categorias", text:"categorias",blank:true},
+  { url: "/admin/subcategorias", text:"subcategorias",blank:true},
+  { url: "/admin/iconos", text:"iconos",blank:true},
+  { url: "/admin/ventas", text:"ventas",blank:true},
+  { url: "/admin/cupones", text:"cupones",blank:true},
   { url: "/admin/facturacion", text: "Facturación", blank: true },
   {
     url: "/admin/estadistica",

@@ -9,6 +9,7 @@ import { formatCurrency } from "@/src/lib/utils";
 import { createOrder } from "@/actions/create-order-actions";
 import { OrderSchema } from "@/src/schema";
 import MobileOrderButton from "@/components/products/MobileOrderButton";
+import FormularioCupon from "@/components/carrito/FormularioCupon";
 
 export default function OrderSummary() {
   const order = useStore((state) => state.order);
@@ -17,27 +18,43 @@ export default function OrderSummary() {
   const isMobileOrderOpen = useStore((state) => state.isMobileOrderOpen);
   const toggleMobileOrder = useStore((state) => state.toggleMobileOrder);
 
-  const total = useMemo(() => {
+  const subtotal = useMemo(() => {
     return order.reduce((sum, item) => sum + item.price * item.quantity, 0);
   }, [order]);
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const isFormValidRef = useRef(false);
+  const [descuento, setDescuento] = useState(0);
+  const [codigoCupon, setCodigoCupon] = useState("");
+  const [mensajeCupon, setMensajeCupon] = useState("");
+  const [loadingCupon, setLoadingCupon] = useState(false);
+  const [cuponAplicado, setCuponAplicado] = useState(false);
 
   const nameRef = useRef(name);
   const phoneRef = useRef(phone);
-  const totalRef = useRef(total);
+  const subtotalRef = useRef(subtotal);
+  const descuentoRef = useRef(descuento);
+
+  // Cálculo del total con descuento
+  const total = useMemo(() => {
+    return subtotal - descuento;
+  }, [subtotal, descuento]);
 
   const [itemComments, setItemComments] = useState<{ [key: number]: string }>(
     {}
   );
 
+  // La referencia al ID de la orden para aplicar el cupón
+  const [orderId, setOrderId] = useState<number | null>(null);
+
   useEffect(() => {
     nameRef.current = name;
     phoneRef.current = phone;
     isFormValidRef.current = name.trim() !== "" && phone.trim() !== "";
-    totalRef.current = total;
+    subtotalRef.current = subtotal;
+    descuentoRef.current = descuento;
+    
     console.log(
       "Form validity updated:",
       isFormValidRef.current,
@@ -45,13 +62,66 @@ export default function OrderSummary() {
       name,
       "Phone:",
       phone,
-      "Total:",
+      "Subtotal:",
+      subtotal,
+      "Descuento:",
+      descuento,
+      "Total con descuento:",
       total
     );
-  }, [name, phone, total]);
+  }, [name, phone, subtotal, descuento, total]);
 
   const handleCommentChange = (itemId: number, comment: string) => {
     setItemComments((prev) => ({ ...prev, [itemId]: comment }));
+  };
+
+  // Aplicar cupón de descuento
+  const aplicarCupon = async () => {
+    if (!codigoCupon.trim()) {
+      toast.error("Por favor ingresa un código de cupón");
+      return;
+    }
+
+    setLoadingCupon(true);
+    try {
+      const response = await fetch('/api/cupones/validar', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          codigo: codigoCupon,
+          subtotal: subtotal
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        toast.error(data.error || 'No se pudo aplicar el cupón');
+        return;
+      }
+
+      // Aplicar el descuento
+      setDescuento(data.descuento);
+      setMensajeCupon(data.mensaje);
+      setCuponAplicado(true);
+      toast.success(data.mensaje || '¡Cupón aplicado!');
+    } catch (error) {
+      console.error('Error al aplicar cupón:', error);
+      toast.error('Ocurrió un error al procesar el cupón');
+    } finally {
+      setLoadingCupon(false);
+    }
+  };
+
+  // Eliminar cupón aplicado
+  const eliminarCupon = () => {
+    setDescuento(0);
+    setCodigoCupon("");
+    setMensajeCupon("");
+    setCuponAplicado(false);
+    toast.info('Cupón eliminado');
   };
 
   const handleCreateOrder = useCallback(
@@ -62,6 +132,10 @@ export default function OrderSummary() {
           ...item,
           ingredients: itemComments[item.id] || "",
         })),
+        descuento: descuentoRef.current,
+        subtotal: subtotalRef.current,
+        total: subtotalRef.current - descuentoRef.current,
+        codigoCupon: cuponAplicado ? codigoCupon : null
       };
       console.log("Datos de la orden a crear:", orderWithComments);
       try {
@@ -69,11 +143,19 @@ export default function OrderSummary() {
 
         if (result.success) {
           console.log("Orden creada:", result.order);
+          // Guardar el ID de la orden para poder aplicar cupones
+          if (result.order && result.order.id) {
+            setOrderId(result.order.id);
+          }
           toast.success("Pedido realizado correctamente");
           clearOrder();
           setName("");
           setPhone("");
           setItemComments({});
+          setDescuento(0);
+          setCodigoCupon("");
+          setMensajeCupon("");
+          setCuponAplicado(false);
         } else {
           console.error("Error al crear la orden:", result.errors);
           if (result.errors && Array.isArray(result.errors)) {
@@ -89,7 +171,7 @@ export default function OrderSummary() {
         toast.error("Error inesperado al crear la orden");
       }
     },
-    [clearOrder, itemComments, order]
+    [clearOrder, itemComments, order, subtotal, codigoCupon, cuponAplicado]
   );
 
   const handlePayPalApprove = useCallback(
@@ -101,11 +183,14 @@ export default function OrderSummary() {
         const orderData = {
           name: nameRef.current,
           phoneNumber: phoneRef.current,
-          total: totalRef.current,
+          total: subtotalRef.current - descuentoRef.current,
+          subtotal: subtotalRef.current,
+          descuento: descuentoRef.current,
           order: order.map((item) => ({
             ...item,
             ingredients: itemComments[item.id] || "",
           })),
+          codigoCupon: cuponAplicado ? codigoCupon : null
         };
         console.log("Order data being sent:", orderData);
         await handleCreateOrder(orderData);
@@ -114,7 +199,7 @@ export default function OrderSummary() {
         toast.error("Error al procesar el pago");
       }
     },
-    [handleCreateOrder, order, itemComments]
+    [handleCreateOrder, order, itemComments, subtotal, codigoCupon, cuponAplicado]
   );
 
   const handleCashOrder = useCallback(
@@ -130,18 +215,39 @@ export default function OrderSummary() {
       const orderData = {
         name: nameRef.current,
         phoneNumber: phoneRef.current,
-        total: totalRef.current,
+        total: subtotalRef.current - descuentoRef.current,
+        subtotal: subtotalRef.current,
+        descuento: descuentoRef.current,
         order: order.map((item) => ({
           ...item,
           ingredients: itemComments[item.id] || "",
         })),
+        codigoCupon: cuponAplicado ? codigoCupon : null
       };
 
       console.log("Order data for cash:", orderData);
       await handleCreateOrder(orderData);
     },
-    [handleCreateOrder, order, itemComments]
+    [handleCreateOrder, order, itemComments, subtotal, codigoCupon, cuponAplicado]
   );
+
+  const handleIncrement = useCallback((id: number) => {
+    const product = order.find(item => item.id === id);
+    if (product) {
+      useStore.getState().increaseQuantity(id);
+    }
+  }, [order]);
+
+  const handleDecrement = useCallback((id: number) => {
+    const product = order.find(item => item.id === id);
+    if (product && product.quantity > 1) {
+      useStore.getState().decreaseQuantity(id);
+    }
+  }, [order]);
+
+  const handleRemove = useCallback((id: number) => {
+    useStore.getState().removeItem(id);
+  }, []);
 
   return (
     <aside
@@ -174,19 +280,74 @@ export default function OrderSummary() {
             <div key={item.id}>
               <ProductDetails item={item} />
               <textarea
-                placeholder="Comentarios (opcional): Agregar o quitar ingredientes"
+                placeholder="Comentarios"
                 className="bg-white border border-gray-900 text-black p-2 w-full mt-2 mb-4"
                 value={itemComments[item.id] || ""}
                 onChange={(e) => handleCommentChange(item.id, e.target.value)}
               />
             </div>
           ))}
-          <p className="text-2xl font-bold mt-32 text-center text-black">
+          
+          {/* Formulario para aplicar cupón */}
+          <div className="mb-4 p-3 border border-gray-300 bg-white rounded-md">
+            <h3 className="text-black font-bold mb-2">¿Tienes un cupón de descuento?</h3>
+            
+            {mensajeCupon && (
+              <div className="mb-3 p-2 bg-green-100 text-green-700 rounded-md">
+                <p className="font-bold">¡Cupón aplicado!</p>
+                <p>{mensajeCupon}</p>
+              </div>
+            )}
+            
+            <div className="flex space-x-2">
+              <input
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none"
+                placeholder="Ingresa tu código"
+                value={codigoCupon}
+                onChange={(e) => setCodigoCupon(e.target.value.toUpperCase())}
+                disabled={cuponAplicado}
+              />
+              {!cuponAplicado ? (
+                <button
+                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
+                  onClick={aplicarCupon}
+                  disabled={loadingCupon || !codigoCupon.trim()}
+                >
+                  {loadingCupon ? '...' : 'Aplicar'}
+                </button>
+              ) : (
+                <button
+                  className="px-4 py-2 border border-red-600 text-red-600 rounded-md hover:bg-red-50"
+                  onClick={eliminarCupon}
+                >
+                  Quitar
+                </button>
+              )}
+            </div>
+          </div>
+          
+          {/* Resumen de la orden */}
+          <div className="mt-20 text-black">
+            <div className="flex justify-between mb-2">
+              <span className="font-medium">Subtotal:</span>
+              <span>{formatCurrency(subtotal)}</span>
+            </div>
+            
+            {descuento > 0 && (
+              <div className="flex justify-between mb-2 text-green-600">
+                <span className="font-medium">Descuento:</span>
+                <span>-{formatCurrency(descuento)}</span>
+              </div>
+            )}
+          </div>
+          
+          <p className="text-2xl font-bold mt-4 text-center text-black border-t border-dashed border-gray-400 pt-2">
             Total a pagar:{" "}
             <span className="font-bold text-black">
-              {formatCurrency(totalRef.current)}
+              {formatCurrency(total)}
             </span>
           </p>
+          
           <form
             className="w-full mt-10 gap-5 space-y-5"
             onSubmit={handleCashOrder}
@@ -236,7 +397,7 @@ export default function OrderSummary() {
                     "isFormValid:",
                     isFormValidRef.current,
                     "Total:",
-                    totalRef.current
+                    total
                   );
                   if (!isFormValidRef.current) {
                     toast.error(
@@ -252,7 +413,7 @@ export default function OrderSummary() {
                     purchase_units: [
                       {
                         amount: {
-                          value: totalRef.current.toFixed(2),
+                          value: total.toFixed(2),
                           currency_code: "MXN",
                         },
                       },

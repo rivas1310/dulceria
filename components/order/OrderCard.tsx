@@ -90,7 +90,7 @@ export default function OrderCard({ order, onOrderComplete }: OrderCardProps) {
         ))}
         {/* Mostrar los ingredientes aquí, fuera del mapeo de productos */}
         {order.ingredients && (
-          <p className="text-sm text-gray-600 mt-4">
+          <p className="text-sm text-white mt-4">
             <strong>Ingredientes:</strong> {order.ingredients}
           </p>
         )}

@@ -2,7 +2,6 @@
 
 import { prisma } from "../src/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { OrderIdSchema } from "../src/schema";
 import twilio from "twilio";
 
 const accountSid = process.env.SID_SMS;
@@ -36,18 +35,15 @@ export async function completeOrder(formData: FormData) {
     };
   }
 
-  const data = { orderId, phoneNumber };
-  const result = OrderIdSchema.safeParse(data);
-
-  if (!result.success) {
-    console.error("Datos de pedido inválidos:", result.error);
-    return { success: false, error: "Datos de pedido inválidos" };
-  }
-
   try {
+    const parsedOrderId = parseInt(orderId);
+    if (isNaN(parsedOrderId) || parsedOrderId <= 0) {
+      return { success: false, error: "ID de orden inválido" };
+    }
+
     console.log("Actualizando orden en la base de datos");
     const order = await prisma.order.findUnique({
-      where: { id: parseInt(orderId as string) },
+      where: { id: parsedOrderId },
     });
 
     if (!order) {
@@ -55,7 +51,7 @@ export async function completeOrder(formData: FormData) {
     }
 
     const updatedOrder = await prisma.order.update({
-      where: { id: result.data.orderId },
+      where: { id: parsedOrderId },
       data: { status: true, orderReadyAt: new Date() },
     });
 
@@ -101,7 +97,7 @@ export async function completeOrder(formData: FormData) {
       })
     );
 
-    const formattedPhone = formatPhoneNumber(phoneNumber as string);
+    const formattedPhone = formatPhoneNumber(phoneNumber);
     if (formattedPhone) {
       try {
         console.log("Enviando SMS a:", formattedPhone);

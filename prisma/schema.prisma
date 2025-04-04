@@ -1,50 +1,150 @@
-
-
 generator client {
-  provider = "prisma-client-js"
-  binaryTargets   = ["native", "debian-openssl-3.0.x", "windows"]
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x", "windows"]
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
-model Category{
-  id  Int @id  @default(autoincrement())
-  name String
-  slug String
-  products Product []
-  
-} 
 
-model Product{
-  id  Int @id  @default(autoincrement())
-  name String
-  price Float
-  image String
-  categoryId Int
-  isActive    Boolean  @default(true)
-  stock       Int 
-  category Category @relation(fields: [categoryId],references: [id])
-  orderItems OrderProducts[]
+model Category {
+  id            Int           @id @default(autoincrement())
+  name          String
+  slug          String        @unique
+  isActive      Boolean       @default(true)
+  iconPath      String?       @default("/icons/default-category.svg")
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  products      Product[]
+  subcategories Subcategory[]
 }
 
-model Order{
-  id Int @id @default(autoincrement())
-  name String 
-  total Float
-  date DateTime @default(now())
-  status Boolean @default(false)
-  orderReadyAt DateTime?
-  phoneNumber    String?
+model Subcategory {
+  id         Int       @id @default(autoincrement())
+  name       String
+  slug       String
+  isActive   Boolean   @default(true)
+  categoryId Int
+  iconPath   String?   @default("/subcategories/default.svg")
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  products   Product[]
+  category   Category  @relation(fields: [categoryId], references: [id])
+
+  @@unique([slug, categoryId])
+}
+
+model ProductoSAT {
+  id             Int      @id @default(autoincrement())
+  productId      Int      @unique
+  claveSAT       String
+  claveUnidad    String   @default("H87")
+  descripcionSAT String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  product        Product  @relation(fields: [productId], references: [id])
+}
+
+model Product {
+  id            Int             @id @default(autoincrement())
+  name          String
+  image         String
+  categoryId    Int
+  price         Float
+  isActive      Boolean         @default(true)
+  stock         Int
+  subcategoryId Int?
+  orderItems    OrderProducts[]
+  category      Category        @relation(fields: [categoryId], references: [id])
+  subcategory   Subcategory?    @relation(fields: [subcategoryId], references: [id])
+  productoSAT   ProductoSAT?
+}
+
+model Order {
+  id            Int             @id @default(autoincrement())
+  name          String
+  total         Float
+  date          DateTime        @default(now())
+  status        Boolean         @default(false)
+  orderReadyAt  DateTime?
+  phoneNumber   String?
   ingredients   String?
   orderProducts OrderProducts[]
+  facturas      facturas?
 }
-model OrderProducts{
-id Int @id @default(autoincrement())
-orderId Int
-order Order @relation(fields: [orderId],references: [id])
-productId Int
-product Product @relation(fields: [productId],references: [id])
-quantity Int
+
+model OrderProducts {
+  id        Int     @id @default(autoincrement())
+  orderId   Int
+  productId Int
+  quantity  Int
+  order     Order   @relation(fields: [orderId], references: [id])
+  product   Product @relation(fields: [productId], references: [id])
+}
+
+model ConceptoFactura {
+  id            Int      @id @default(autoincrement())
+  cantidad      Int
+  descripcion   String
+  valorUnitario Decimal
+  importe       Decimal
+  claveProdServ String
+  claveUnidad   String
+  facturaId     Int
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  factura       facturas @relation(fields: [facturaId], references: [id])
+}
+
+model facturas {
+  id             Int               @id @default(autoincrement())
+  folio          String?           @unique
+  uuid           String?           @unique
+  fechaEmision   DateTime          @default(now())
+  estado         EstadoFactura     @default(PENDIENTE)
+  emisorRFC      String
+  emisorNombre   String
+  emisorCP       String
+  receptorRFC    String
+  receptorNombre String
+  receptorCP     String
+  regimenFiscal  String
+  usoCFDI        UsoCFDI           @default(G03)
+  subtotal       Decimal
+  descuento      Decimal?
+  iva            Decimal
+  total          Decimal
+  formaPago      FormaPago
+  metodoPago     MetodoPago        @default(PUE)
+  orderId        Int?              @unique
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime
+  conceptos      ConceptoFactura[]
+  Order          Order?            @relation(fields: [orderId], references: [id])
+}
+
+enum FormaPago {
+  EFECTIVO
+  TRANSFERENCIA
+  TARJETA_CREDITO
+  TARJETA_DEBITO
+}
+
+enum MetodoPago {
+  PUE
+  PPD
+}
+
+enum UsoCFDI {
+  G01
+  G02
+  G03
+  P01
+}
+
+enum EstadoFactura {
+  PENDIENTE
+  TIMBRADA
+  CANCELADA
 }

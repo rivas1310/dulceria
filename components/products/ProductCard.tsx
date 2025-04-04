@@ -36,7 +36,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         )}
       </div>
 
-      <div className="p-5  flex flex-col justify-between h-64">
+      <div className="p-5  flex flex-col justify-between h-72">
         <p className="text-2xl font-bold  text-black mb-2">{product.name}</p>
         <p className="mt-3 font-black text-2xl text-black"></p>
 

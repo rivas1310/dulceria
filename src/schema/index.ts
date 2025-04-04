@@ -34,20 +34,32 @@ export const SearchSchema = z.object({
 export const ProductSchema = z.object({
   name: z
     .string()
-    .trim()
-    .min(1, { message: "El Nombre del Producto no puede ir vacio" }),
+    .min(1, { message: "El Nombre del Producto no puede ir vacío" }),
   price: z
     .string()
-    .trim()
-    .transform((value) => parseFloat(value))
-    .refine((value) => value > 0, { message: "Precio no válido" })
-    .or(z.number().min(1, { message: "La Categoría es Obligatoria" })),
+    .transform((val) => Number(val))
+    .refine((val) => !isNaN(val) && val > 0, {
+      message: "El Precio debe ser un número mayor a 0"
+    }),
   categoryId: z
     .string()
-    .trim()
-    .transform((value) => parseInt(value))
-    .refine((value) => value > 0, { message: "La Categoría es Obligatoria" })
-    .or(z.number().min(1, { message: "La Categoría es Obligatoria" })),
-  image: z.string().min(1, { message: "La Imagen es obligatoria" }),
-  stock: z.coerce.number().min(0, "El stock no puede ser negativo"),
+    .transform((val) => Number(val))
+    .refine((val) => !isNaN(val) && val > 0, {
+      message: "Debe seleccionar una Categoría válida"
+    }),
+  subcategoryId: z
+    .string()
+    .transform((val) => Number(val))
+    .refine((val) => !isNaN(val) && val > 0, {
+      message: "Debe seleccionar una Subcategoría válida"
+    }),
+  stock: z
+    .string()
+    .transform((val) => Number(val))
+    .refine((val) => !isNaN(val) && val >= 0, {
+      message: "El Stock debe ser un número mayor o igual a 0"
+    }),
+  image: z
+    .string()
+    .min(1, { message: "La Imagen es obligatoria" })
 });

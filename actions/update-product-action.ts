@@ -1,36 +1,39 @@
 "use server";
 
 import { prisma } from "@/src/lib/prisma";
-import { ProductSchema } from "@/src/schema";
 import { revalidatePath } from "next/cache";
 
-export async function updateProduct(data: unknown, id: number) {
-  const result = ProductSchema.safeParse(data);
-  if (!result.success) {
-    return {
-      errors: result.error.issues,
-    };
-  }
+interface ProductData {
+  name: string;
+  price: number;
+  categoryId: number;
+  subcategoryId?: number;
+  image: string;
+  stock: number;
+}
 
+export async function updateProduct(data: ProductData, id: number) {
   try {
-    await prisma.product.update({
-      where: {
-        id,
-      },
+    const product = await prisma.product.update({
+      where: { id },
       data: {
-        name: result.data.name,
-        price: Number(result.data.price),
-        categoryId: Number(result.data.categoryId),
-        image: result.data.image,
-        stock: Number(result.data.stock),
+        name: data.name,
+        price: data.price,
+        categoryId: data.categoryId,
+        subcategoryId: data.subcategoryId,
+        image: data.image,
+        stock: data.stock,
       },
     });
 
-    revalidatePath("/admin/products");
-    return { success: true };
+    revalidatePath('/admin/products');
+    return { success: true, product };
   } catch (error) {
+    console.error('Error al actualizar:', error);
     return {
-      errors: [{ message: "Error al actualizar el producto" }],
+      errors: [{
+        message: 'Error al actualizar el producto'
+      }]
     };
   }
 }

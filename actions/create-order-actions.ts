@@ -21,7 +21,24 @@ export async function createOrder(data: unknown) {
   try {
     console.log("Validated data:", result.data);
 
-    // Asegúrate de que los campos sean correctos y compatibles con tu esquema de base de datos
+    // Verificar stock antes de crear la orden
+    for (const item of result.data.order) {
+      const product = await prisma.product.findUnique({
+        where: { id: item.id }
+      });
+      
+      if (!product || product.stock < item.quantity) {
+        return {
+          success: false,
+          errors: [{
+            path: "stock",
+            message: `Stock insuficiente para ${item.name}`
+          }]
+        };
+      }
+    }
+
+    // Crear la orden
     const orderData = {
       name: result.data.name,
       total: result.data.total,
@@ -30,7 +47,6 @@ export async function createOrder(data: unknown) {
         .map((product) => product.ingredients)
         .filter(Boolean)
         .join(", "),
-
       orderProducts: {
         create: result.data.order.map((product) => ({
           productId: product.id,
@@ -39,8 +55,6 @@ export async function createOrder(data: unknown) {
       },
     };
 
-    console.log("Order data prepared:", orderData);
-
     const order = await prisma.order.create({
       data: orderData,
       include: {
@@ -48,8 +62,27 @@ export async function createOrder(data: unknown) {
       },
     });
 
-    console.log("Order created successfully:", order);
+    // Actualizar stock y estado de productos
+    await Promise.all(
+      result.data.order.map(async (item) => {
+        const product = await prisma.product.findUnique({
+          where: { id: item.id }
+        });
+        
+        if (product) {
+          const newStock = product.stock - item.quantity;
+          await prisma.product.update({
+            where: { id: item.id },
+            data: {
+              stock: newStock,
+              isActive: newStock > 0
+            }
+          });
+        }
+      })
+    );
 
+    console.log("Order created successfully:", order);
     return { success: true, order };
   } catch (error) {
     console.error("Detailed error when creating order in database:", error);

@@ -77,12 +77,13 @@ export async function PATCH(
   try {
     const id = parseInt(params.id);
     const data = await request.json();
+    const newStock = parseInt(data.stock);
 
     const product = await prisma.product.update({
       where: { id },
       data: {
-        stock: data.stock,
-        isActive: data.isActive !== undefined ? data.isActive : undefined,
+        stock: newStock,
+        isActive: newStock > 0 ? data.isActive : false,
       },
       select: {
         id: true,
