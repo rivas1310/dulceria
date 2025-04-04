@@ -70,8 +70,8 @@ model Order {
   orderReadyAt  DateTime?
   phoneNumber   String?
   ingredients   String?
+  Factura       Factura?
   orderProducts OrderProducts[]
-  facturas      facturas?
 }
 
 model OrderProducts {
@@ -94,10 +94,10 @@ model ConceptoFactura {
   facturaId     Int
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
-  factura       facturas @relation(fields: [facturaId], references: [id])
+  factura       Factura  @relation(fields: [facturaId], references: [id])
 }
 
-model facturas {
+model Factura {
   id             Int               @id @default(autoincrement())
   folio          String?           @unique
   uuid           String?           @unique
