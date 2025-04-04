@@ -1,5 +1,5 @@
 "use client"
-import { ProductSchema } from "@/src/schema";
+import { ProductSchema } from "@/src/schema/index";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
 

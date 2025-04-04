@@ -18,10 +18,11 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  // Añadir esta configuración para el manejo de archivos
+  // Configuración de API
   api: {
-    bodyParser: false,
-    responseLimit: '8mb',
+    bodyParser: {
+      sizeLimit: '8mb',
+    },
   },
   experimental: {
     serverActions: true,
