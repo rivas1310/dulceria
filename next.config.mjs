@@ -13,6 +13,17 @@ const nextConfig = {
   // Añadimos la configuración de webpack
   webpack: (config, { isServer }) => {
     config.ignoreWarnings = [{ module: /react-server-dom-webpack/ }];
+    
+    // Resolver el problema con Cloudinary
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+      };
+    }
+    
     return config;
   },
   typescript: {
@@ -26,7 +37,9 @@ const nextConfig = {
   },
   experimental: {
     serverActions: true,
-  }
+  },
+  // Transpilación de módulos
+  transpilePackages: ['next-cloudinary']
 };
 
 export default nextConfig;
