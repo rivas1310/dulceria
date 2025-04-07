@@ -1,61 +1,96 @@
 "use client"
 import { getImagePath } from '@/src/lib/utils';
 import Image from 'next/image';
-import { useState, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { TbPhotoPlus } from 'react-icons/tb';
+import { CldUploadWidget } from 'next-cloudinary';
 
 export default function ImageUpload({image}:{image: string | undefined}) {
-  const [imageUrl, setImageUrl] = useState('');
-  const [previewUrl, setPreviewUrl] = useState('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [imageUrl, setImageUrl] = useState<string>('');
+  const [previewUrl, setPreviewUrl] = useState<string>('');
+  const [error, setError] = useState<string>('');
+  const [isUploading, setIsUploading] = useState(false);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  useEffect(() => {
+    if (image) {
+      setImageUrl(image);
+    }
+  }, [image]);
 
-    // Crear una URL para previsualizar la imagen
-    const fileUrl = URL.createObjectURL(file);
-    setPreviewUrl(fileUrl);
+  const handleSuccess = (result: any) => {
+    if (result.event !== 'success') return;
     
-    // Simulamos una URL de Cloudinary para mantener la compatibilidad
-    // En un entorno real, aquí subirías la imagen a un servidor
-    setImageUrl(`/uploads/${file.name}`);
+    try {
+      const secureUrl = result.info.secure_url;
+      console.log('✅ Imagen subida exitosamente:', secureUrl);
+      setImageUrl(secureUrl);
+      setPreviewUrl(secureUrl);
+      setError('');
+      setIsUploading(false);
+    } catch (error) {
+      console.error('Error al procesar imagen:', error);
+      setError('Error al procesar la imagen');
+      setIsUploading(false);
+    }
   };
 
-  const handleClick = () => {
-    fileInputRef.current?.click();
+  const handleError = (error: any) => {
+    console.error('Error de Cloudinary:', error);
+    setError('Error al subir la imagen');
+    setIsUploading(false);
   };
 
   return (
     <>
       <div className="space-y-2">
         <label className="text-slate-800">Imagen Productos</label>
-        <div
-          className="relative cursor-pointer hover:opacity-70 transition p-10 border-neutral-300 flex flex-col justify-center items-center gap-4 text-neutral-600 bg-slate-100"
-          onClick={handleClick}
+        
+        {error && (
+          <div className="mb-2 p-2 bg-red-100 text-red-700 rounded text-sm">
+            {error}
+          </div>
+        )}
+        
+        <CldUploadWidget 
+          onSuccess={handleSuccess}
+          onError={handleError}
+          onOpen={() => setIsUploading(true)}
+          uploadPreset="tuuncynd"
+          options={{
+            maxFiles: 1,
+            resourceType: 'auto',
+            folder: 'products',
+            clientAllowedFormats: ['png', 'jpg', 'jpeg', 'svg', 'webp', 'gif'],
+            maxImageFileSize: 5000000 // 5MB
+          }}
         >
-          <TbPhotoPlus size={50} />
-          <p className="text-lg font-semibold">Agregar Imagen</p>
+          {({ open }) => (
+            <div
+              className="relative cursor-pointer hover:opacity-70 transition p-10 border-neutral-300 flex flex-col justify-center items-center gap-4 text-neutral-600 bg-slate-100"
+              onClick={() => {
+                if (!isUploading) {
+                  open();
+                }
+              }}
+            >
+              <TbPhotoPlus size={50} />
+              <p className="text-lg font-semibold">
+                {isUploading ? 'Subiendo...' : 'Agregar Imagen'}
+              </p>
 
-          {previewUrl && (
-            <div className='absolute inset-0 w-full h-full'>
-              <Image
-                fill
-                style={{objectFit: 'contain'}}
-                src={previewUrl}
-                alt='Imagen de Producto'
-              />
+              {previewUrl && (
+                <div className='absolute inset-0 w-full h-full'>
+                  <Image
+                    fill
+                    style={{objectFit: 'contain'}}
+                    src={previewUrl}
+                    alt='Imagen de Producto'
+                  />
+                </div>
+              )}
             </div>
           )}
-        </div>
-        
-        <input
-          type="file"
-          accept="image/*"
-          className="hidden"
-          ref={fileInputRef}
-          onChange={handleFileChange}
-        />
+        </CldUploadWidget>
       </div>
 
       {image && !previewUrl && (
@@ -75,7 +110,7 @@ export default function ImageUpload({image}:{image: string | undefined}) {
       <input
         type="hidden" 
         name='image'
-        defaultValue={imageUrl ? imageUrl : image}
+        defaultValue={imageUrl || image || '/placeholder-image.jpg'}
       />
     </>
   );

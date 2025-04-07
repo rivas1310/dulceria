@@ -10,24 +10,30 @@ export default function AddProductForm({
 }) {
   const router = useRouter();
 
-  const handleSubmit = async (formData: FormData) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    
     try {
-      // Obtener los valores del formulario como strings
+      const form = e.currentTarget;
+      const formData = new FormData(form);
+
+      // Obtener los valores del formulario
       const rawData = {
         name: formData.get("name")?.toString() || "",
         price: formData.get("price")?.toString() || "",
         categoryId: formData.get("categoryId")?.toString() || "",
         subcategoryId: formData.get("subcategoryId")?.toString() || "",
         stock: formData.get("stock")?.toString() || "",
-        image: "/placeholder-image.jpg",
+        image: formData.get("image")?.toString() || "/placeholder-image.jpg",
       };
 
-      console.log('Datos a validar:', rawData);
+      console.log('Datos recibidos del formulario:', rawData);
 
-      // Validar los datos
+      // Validar los datos con Zod
       const result = ProductSchema.safeParse(rawData);
       
       if (!result.success) {
+        console.error('Errores de validación:', result.error.issues);
         result.error.issues.forEach((issue) => {
           toast.error(issue.message);
         });
@@ -44,9 +50,9 @@ export default function AddProductForm({
         image: result.data.image,
       };
 
-      console.log('Datos transformados a enviar:', validatedData);
+      console.log('Datos validados a enviar:', validatedData);
 
-      // Enviar los datos validados y transformados al servidor
+      // Enviar los datos al servidor
       const response = await fetch('/api/products', {
         method: 'POST',
         headers: {
@@ -55,19 +61,24 @@ export default function AddProductForm({
         body: JSON.stringify(validatedData),
       });
 
-      const responseData = await response.json();
-
       if (!response.ok) {
-        console.error('Error del servidor:', responseData);
-        if (responseData.issues) {
-          responseData.issues.forEach((issue: any) => {
-            toast.error(`Error: ${issue.message}`);
+        const errorData = await response.json();
+        console.error('Error del servidor:', errorData);
+        
+        if (errorData.issues) {
+          errorData.issues.forEach((issue: any) => {
+            toast.error(issue.message);
           });
+        } else if (errorData.error) {
+          toast.error(errorData.error);
         } else {
-          throw new Error(responseData.error || 'Error al crear el producto');
+          throw new Error('Error al crear el producto');
         }
         return;
       }
+
+      const data = await response.json();
+      console.log('Respuesta del servidor:', data);
 
       toast.success("Producto creado exitosamente");
       router.push("/admin/products");
@@ -80,7 +91,7 @@ export default function AddProductForm({
 
   return (
     <div className="bg-white mt-10 px-5 py-10 rounded-md shadow-md max-w-3xl mx-auto">
-      <form className="space-y-5" action={handleSubmit}>
+      <form className="space-y-5" onSubmit={handleSubmit}>
         {children}
         <button
           type="submit"

@@ -61,5 +61,6 @@ export const ProductSchema = z.object({
     }),
   image: z
     .string()
-    .min(1, { message: "La Imagen es obligatoria" })
+    .optional()
+    .default("/placeholder-image.jpg")
 });

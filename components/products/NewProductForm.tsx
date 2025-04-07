@@ -4,7 +4,6 @@ import { ProductSchema } from "@/src/schema/index";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
 import ImageUpload from "./ImageUpload";
-import Image from 'next/image';
 
 interface Category {
   id: number;
@@ -21,7 +20,6 @@ export default function NewProductForm() {
   const router = useRouter();
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -36,17 +34,6 @@ export default function NewProductForm() {
     } catch (error) {
       console.error('Error al cargar categorías:', error);
       toast.error('Error al cargar categorías');
-    }
-  };
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
     }
   };
 
@@ -129,6 +116,7 @@ export default function NewProductForm() {
             type="number"
             name="price"
             step="0.01"
+            min="0"
             className="w-full p-2 border rounded-md"
             required
           />
@@ -181,12 +169,13 @@ export default function NewProductForm() {
           <input
             type="number"
             name="stock"
+            min="0"
             className="w-full p-2 border rounded-md"
             required
           />
         </div>
 
-        <ImageUpload image={imagePreview || undefined} />
+        <ImageUpload image={undefined} />
 
         <button
           type="submit"
